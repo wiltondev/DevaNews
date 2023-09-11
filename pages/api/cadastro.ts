@@ -10,7 +10,7 @@ import { politicaCORS } from '../../middlewares/politicaCORS';
 
 
 
-const handler = nc()
+const handler = nc ()
     .use(upload.single('file'))
     .post(async (req: NextApiRequest, res:NextApiResponse<RespostaPadraoMsg>) => {
 

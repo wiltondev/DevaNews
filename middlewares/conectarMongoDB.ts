@@ -9,7 +9,7 @@ export const conectarMongoDB = (handler : NextApiHandler)  =>
         //ou proximo middleware
         if(mongoose.connections[0].readyState){
             return handler(req, res);
-        }
+        };
 
         //já que não esta conectado vamos conectar
         //obter a variável de ambiente preenchida do env
@@ -20,9 +20,10 @@ export const conectarMongoDB = (handler : NextApiHandler)  =>
             return res.status(500).json({erro: 'ENV de configuração de banco, não informado'});
         };
 
-        mongoose.connection.on('conected', () => console.log('Banco de dados conectado'));
-        mongoose.connection.on('error', erro => console.log(`Ocorreu um erro ao conectar no banco: ${erro}`))
+        mongoose.connection.on('error', erro => console.log(`Ocorreu um erro ao conectar no banco: ${erro}`));
+
         await mongoose.connect(DB_CONEXAO_STRING);
+        mongoose.connection.on('conected', () => console.log('Banco de dados conectado'));
 
         //agora posso seguir para o endpoint, pois estou conectado
         //no banco

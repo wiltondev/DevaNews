@@ -14,7 +14,7 @@ const endpointLogin = async (
     res: NextApiResponse<RespostaPadraoMsg | LoginResposta>
     ) => {
 
-    const { MINHA_CHAVE_JWT } = process.env;
+    const {MINHA_CHAVE_JWT} = process.env;
     if (!MINHA_CHAVE_JWT) {
         return res.status(500).json({ erro: 'ENV JWT não informada' });
     }
