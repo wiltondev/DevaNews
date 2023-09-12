@@ -17,6 +17,7 @@
         "publicacoes",
         "Resposta",
         "titulo",
+        "userid",
         "usuarios",
         "validar"
     ]

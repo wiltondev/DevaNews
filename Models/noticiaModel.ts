@@ -1,7 +1,14 @@
 
 import mongoose from 'mongoose';
 
-const noticiaSchema = new mongoose.Schema({
+const NoticiaSchema = new mongoose.Schema({
+  usuarioId: { 
+    type: String,
+     required: true,
+     unique: true, // Chave primária
+     index: true
+    },
+
   titulo: {
     type: String,
     required: true,
@@ -23,6 +30,6 @@ const noticiaSchema = new mongoose.Schema({
   },
 });
 
-const noticiaModel = mongoose.model('Noticia', noticiaSchema);
 
-export default noticiaModel;
+
+export const NoticiaModel = (mongoose.models.noticia || mongoose.model('noticia', NoticiaSchema));
