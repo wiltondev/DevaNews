@@ -35,7 +35,7 @@ const endpointLogin = async (
                 token
             });
         };
-        return res.status(400).json({ erro: 'Usuario ou senha não encontrado' });
+        return res.status(400).json({ erro: 'Usuario ou senha não encontrado não foi possivel validar' });
     }
     return res.status(405).json({ erro: 'Método informado não é valido' })
 
