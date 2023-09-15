@@ -1,5 +1,6 @@
 import multer from "multer";
 import { createBucketClient } from "@cosmicjs/sdk";
+import { getVideoDurationInSeconds } from 'get-video-duration';
 
 const {
     BUCKET_SLUG,
@@ -18,12 +19,13 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Função para fazer upload de imagem ou vídeo para Cosmic
-const uploadImagemCosmic = async (req: any, mediaType: string = "materia") => {
+const uploadImagemCosmic = async (req: any, mediaType?: string) => {
     if (req?.file?.originalname) {
         // Verifica se a extensão do arquivo é suportada (imagem ou vídeo)
-        const supportedExtensions = /\.(png|jpg|jpeg|mp4)$/i;
-        if (!supportedExtensions.test(req.file.originalname)) {
-            throw new Error("Extensão de arquivo não suportada.");
+        if (
+            !req.file.originalname.match(/\.(png|jpg|jpeg|mp4|mov)$/i)
+        ) {
+            throw new Error('Extensão de arquivo inválida');
         }
 
         // Verifica se o arquivo é uma imagem
@@ -34,18 +36,30 @@ const uploadImagemCosmic = async (req: any, mediaType: string = "materia") => {
             buffer: req.file.buffer,
         };
 
-        let folder = mediaType;
-        if (isImage && mediaType === "usuario") {
-            folder = "avatar";
-        }
+        if (req.url && req.url.includes("noticia")) {
+            return await bucketDevanews.media.insertOne({
+                media: media_object,
+                folder: "noticia",
+            });
+        } else if (req.url && req.url.includes("usuario")) {
+            return await bucketDevanews.media.insertOne({
+                media: media_object,
+                folder: "avatar",
+            });
+        } else if (req.url && req.url.includes("noticia") && mediaType === 'video') {
+            // Verifica se a rota contém "reels" para processar vídeos de até 2 minutos
+            const videoDuration = await getVideoDurationInSeconds(req.file.buffer);
 
-        return await bucketDevanews.media.insertOne({
-            media: media_object,
-            folder: folder,
-        });
+             if (videoDuration > 120) {
+                throw new Error('Vídeo deve ter no máximo 2 minutos de duração.');
+            }
+            return await bucketDevanews.media.insertOne({
+                media: media_object,
+                folder: "noticia",
+            });
+        } 
+        }
     }
-    throw new Error("Nenhum arquivo para fazer upload.");
-};
+
 
 export { upload, uploadImagemCosmic };
-

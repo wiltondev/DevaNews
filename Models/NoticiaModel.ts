@@ -1,14 +1,15 @@
 import mongoose, { Schema } from "mongoose";
 
-
-const PublicacaoSchema = new Schema({
+const NoticiaSchema = new Schema({
     idUsuario: { type: String, required: true },
-    descricao: { type: String, required: true },
+    titulo: { type: String, required: true, maxlength: 200 },
+    materia: { type: String, required: true, minlength: 2, maxlength: 3000 },
+    categoria: { type: String, maxlength: 30 },
     tipo: { type: String, required: true },
     data: { type: Date, required: true },
-    largura: { type: Number},
-    altura: { type: Number},
-    duracao: { type: Number},
+    largura: { type: Number },
+    altura: { type: Number },
+    duracao: { type: Number },
     URL: { type: String },
     comentarios: [
         {
@@ -25,14 +26,7 @@ const PublicacaoSchema = new Schema({
             ]
         }
     ],
-
-
-
-
     likes: { type: Array, required: true, default: [] },
 });
 
-
-export const PublicacaoModel = (mongoose.models.publicacoes || mongoose.model('publicacoes', PublicacaoSchema));
-
-
+export const NoticiaModel = (mongoose.models.noticias || mongoose.model('noticias', NoticiaSchema));
