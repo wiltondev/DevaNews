@@ -83,7 +83,8 @@ const handler = nc()
       const{noticiaId } = req.query;
      
 
-      const userId = req.query.userId;
+
+      const userId= req.user
 
       const usuario = await UsuarioModel.findById(userId);
       console.log("usuario:",usuario.nome);

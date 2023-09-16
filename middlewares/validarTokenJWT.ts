@@ -2,9 +2,19 @@ import type {NextApiRequest, NextApiResponse, NextApiHandler} from 'next';
 import type {RespostaPadraoMsg} from '../types/RespostaPadraoMsg';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 
+
+
+interface AuthenticatedRequest extends NextApiRequest {
+    user?: JwtPayload; 
+  }
+
+
+
+
+
 export const validarTokenJwt = (handler : NextApiHandler) =>
 
-async(req : NextApiRequest, res : NextApiResponse<RespostaPadraoMsg| any[]> ) => {
+async(req : AuthenticatedRequest, res : NextApiResponse<RespostaPadraoMsg> ) => {
 
     try{
         const {MINHA_CHAVE_JWT} = process.env;
@@ -33,7 +43,8 @@ async(req : NextApiRequest, res : NextApiResponse<RespostaPadraoMsg| any[]> ) =>
             if(!decoded){
                 return res.status(401).json({erro: 'Nao foi possível validar o token de acesso'});
             }
-            
+            req.user = decoded;
+           
             req.query.userId =decoded._id;
         
         }
