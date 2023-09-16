@@ -53,11 +53,11 @@ const handler = nc()
         mediaType = "sem media";
       }
 
-      console.log("aqui3");
+      
       if (mediaType === undefined) {
         return res.status(400).json({ erro: 'Tipo de arquivo não suportado.' });
       }
-      console.log("aqui4");
+     
 
       const media = await uploadImagemCosmic(req, mediaType);
 
@@ -72,7 +72,7 @@ const handler = nc()
 
       await NoticiaModel.create(noticia);
 
-      return res.status(200).json({ msg: 'Notícia criada com sucesso' });
+      return res.status(200).json({ msg: 'Materia criada com sucesso' });
     } catch (e) {
       console.error(e);
       return res.status(400).json({ erro: 'Erro ao cadastrar notícia' });
@@ -80,7 +80,28 @@ const handler = nc()
   })
   .delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     try {
-      // ...
+      const{noticiaId } = req.query;
+     
+
+      const userId = req.query.userId;
+
+      const usuario = await UsuarioModel.findById(userId);
+      console.log("usuario:",usuario.nome);
+      if (!usuario) {
+        return res.status(400).json({ erro: 'Usuário não encontrado' });  
+
+      };
+      const noticiasMinhas = await NoticiaModel.find({_id: noticiaId, idUsuario: usuario._id });
+      console.log("noticiasMinhas:",noticiasMinhas);
+      if (noticiasMinhas && noticiasMinhas.length> 0) {
+        await NoticiaModel.deleteOne({ _id: noticiaId, idUsuario: usuario._id });
+        return res.status(200).json({ msg: 'Notícia deletada com sucesso' });
+      
+              
+      }
+
+      return res.status(400).json({ erro: 'Notícia não encontrada' });
+    
     } catch (e) {
       console.error(e);
       return res.status(400).json({ erro: 'Erro ao deletar notícia' });
