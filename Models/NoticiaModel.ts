@@ -6,10 +6,7 @@ const NoticiaSchema = new Schema({
     materia: { type: String, required: true, minlength: 2, maxlength: 3000 },
     categoria: { type: String, maxlength: 30 },
     data: { type: Date, required: true },
-    largura: { type: Number },
-    altura: { type: Number },
-    duracao: { type: Number },
-    URL: { type: String },
+    
   
 });
 

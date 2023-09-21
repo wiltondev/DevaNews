@@ -1,17 +1,11 @@
-const mongoose = require('mongoose');
+import mongoose, { Schema } from "mongoose";
 
-const mediaSchema = new mongoose.Schema({
-  noticiaId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Noticia',
-    required: true,
-  },
-  nomeArquivo: {
-    type: String,
-    required: true,
-  },
+// Esquema para representar as mídias vinculadas às notícias
+const MediaSchema = new Schema({
+  tipo: { type: String, enum: ["imagem", "video"], required: true },
+  arquivo: { type: Buffer, required: true },
+  noticiaId: { type: Schema.Types.ObjectId, ref: "Noticia", required: true },
 });
 
-
-
- export const MediaModel =( mongoose.model.media || mongoose.model('materia', mediaSchema));
+// Modelo para a coleção de mídias
+export const MediaModel = mongoose.model("Media", MediaSchema);

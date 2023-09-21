@@ -96,15 +96,15 @@ handler.patch(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
 
     // Valide o corpo da solicitação
     if (!data.titulo || data.titulo.length > 200) {
-      return res.status(400).json({ erro: 'Título inválido' });
+      return res.status(400).json({ erro: 'Título inválido DEVE CONTER DE 2 ATE 200 CARACTERES' });
     }
 
     if (!data.materia || data.materia.length < 2 || data.materia.length > 3000) {
-      return res.status(400).json({ erro: 'Matéria inválida' });
+      return res.status(400).json({ erro: 'Matéria inválida DEVE CONTER DE 2 ATE 3000 CARACTERES' });
     }
 
     if (!data.categoria || data.categoria.length > 30) {
-      return res.status(400).json({ erro: 'Categoria inválida' });
+      return res.status(400).json({ erro: 'Categoria inválida DEVE CONTER DE 1 ATE 30 CARACTERES' });
     }
 
     // Atualize a notícia com os novos dados
