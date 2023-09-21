@@ -2,24 +2,21 @@ import { RespostaPadraoMsg } from "../../types/RespostaPadraoMsg";
 import { NextApiResponse } from "next";
 import { conectarMongoDB } from "../../middlewares/conectarMongoDB";
 import nc from 'next-connect';
-import { upload, uploadImagemCosmic } from '../../services/uploadImagemCosmic'; // Não estamos mais usando o multer aqui
+import { upload, uploadImagemCosmic } from "../../services/uploadImagemCosmic";
 import { NoticiaModel } from '../../Models/NoticiaModel';
 import { validarTokenJwt } from "../../middlewares/validarTokenJWT";
 import { politicaCORS } from "../../middlewares/politicaCORS";
-import getVideoDurationInSeconds from "get-video-duration";
-import multer from "multer";
 
-const handler = nc()
+const handler = nc();
 
-// Rota para fazer upload de mídia vinculada a uma notícia existente (POST)
-.use(upload.single('file'))
-.use(validarTokenJwt)
+// Middleware para fazer upload de mídia vinculada a uma notícia existente (POST)
+handler.use(upload.single('file'));
 
- .post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+handler.post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
   try {
     const { userId } = req.query;
-    const { noticiaId, } = req.query;
-    console.log('noticiaId', noticiaId)
+    const noticiaId = req.query.noticiaId;
+    console.log('noticiaId', noticiaId);
 
     // Verifique se a notícia existe no banco de dados
     const noticia = await NoticiaModel.findById(noticiaId);
@@ -42,12 +39,7 @@ const handler = nc()
       return res.status(400).json({ erro: 'Tipo de arquivo inválido' });
     }
 
-    const videoDuration = await getVideoDurationInSeconds(req.file.buffer);
-    if (videoDuration > 120) {
-      return res.status(400).json({ erro: 'Vídeo deve ter no máximo 2 minutos de duração.' });
-    }
-
-    const media = await uploadImagemCosmic(req.file, mediaType); // Use req.file aqui
+    const media = await uploadImagemCosmic(req.file); // Use req.file aqui
 
     const mediaNoticia = {
       tipo: mediaType,
