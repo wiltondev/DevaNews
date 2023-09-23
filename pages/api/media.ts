@@ -44,10 +44,7 @@ handler.post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     const mediaNoticia = {
       tipo: mediaType,
       data: new Date(),
-      largura: media.largura,
-      altura: media.altura,
-      duracao: media.duracao,
-      URL: media.URL,
+      URL: media.URL
     };
 
     // Adicione a mídia vinculada à notícia existente

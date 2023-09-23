@@ -28,10 +28,10 @@ handler.post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
       return res.status(400).json({ erro: 'Usuário não encontrado' });
     }
 
-    const titulo = data.titulo;
-    const materia = data.materia;
-    const categoria = data.categoria;
-
+    const titulo : string = data?.titulo;
+    const materia : string = data?.materia;
+    const categoria : string = data?.categoria;
+    console.log('titulo', titulo);
     // Valide os campos de entrada, como o título, matéria e categoria
     if (!titulo || titulo.length > 200) {
       return res.status(400).json({ erro: 'Título inválido' });
