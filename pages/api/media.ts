@@ -15,7 +15,7 @@ handler.use(upload.single('file'));
 handler.post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
   try {
     const { userId } = req.query;
-    const noticiaId = req.query.noticiaId;
+    const {noticiaId} = req.query.noticiaId;
     console.log('noticiaId', noticiaId);
 
     // Verifique se a notícia existe no banco de dados
