@@ -12,6 +12,13 @@ import getVideoDurationInSeconds from 'get-video-duration';
 import { NoticiaModel } from '../../Models/NoticiaModel';
 import categoria from './categoria';
 
+
+
+
+
+
+
+
 const handler = nc()
 
   // Configurando o middleware para fazer upload de arquivos (imagem ou vídeo)
@@ -65,17 +72,28 @@ const handler = nc()
       }
 
       // Verificando a rota para distinguir entre imagens e vídeos
-      const isVideo = req.file.mimetype.startsWith('video/');
+      const isVideoRoute = req.url && req.url.includes("video");
+    
       const isImage = req.file.mimetype.startsWith('image/');
 
-      // Verificando a duração do vídeo (caso seja um vídeo)
-      if (isVideo) {
-        const videoDuration = await getVideoDurationInSeconds(req.file.path);
-        if (videoDuration > 1200) {
+
+      const formDataTipo = req.body.tipo;
+let isVideo = false;
+
+      // Se estiver na rota "reels" e for um vídeo, verificar a duração
+      if (isVideoRoute && isVideo) {
+        const videoDuration = await getVideoDurationInSeconds(req.file.buffer);
+        if (videoDuration > 120) {
           return res.status(400).json({ erro: 'Vídeo deve ter no máximo 2 minutos de duração.' });
         }
+
+        isVideo = true;
       }
 
+      if (formDataTipo === 'media') {
+        isVideo = true;
+      }
+       
       // Determinando o tipo de mídia (vídeo ou imagem) com base nos formatos
       const mediaType = isVideo ? 'video' : isImage ? 'foto' : undefined;
 
@@ -93,13 +111,15 @@ const handler = nc()
         titulo,
         materia,
         categoria: categoriaExistente._id,
-        URL: media.URL,
         tipo: mediaType,   // Tipo para indicar se a mídia é um vídeo ou foto
         data: new Date(),
+        arquivo: media.media.url
       };
 
-      // Criando a notícia no banco de dados
-     const noticiaCriada = await NoticiaModel.create(noticia);
+    usuario.noticias++;
+    await UsuarioModel.findByIdAndUpdate({_id : usuario._id}, usuario);
+    await NoticiaModel.create(noticia);
+
 
       return res.status(200).json({ msg: 'Notícia criada com sucesso' });
 

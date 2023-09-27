@@ -1,7 +1,6 @@
 import multer from "multer";
 import { createBucketClient } from "@cosmicjs/sdk";
 
-
 // Obtenha as variáveis de ambiente
 const {
     BUCKET_SLUG,
@@ -19,13 +18,12 @@ const bucketDevanews = createBucketClient({
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-
 const uploadImagemCosmic = async (req: any, mediaType?: string) => {
     if (req?.file?.originalname) {
         if (!req.file.originalname.match(/\.(png|jpg|jpeg|mp4|mov|avi)$/i)) {
             throw new Error('Extensão de arquivo inválida');
         }
-        
+
         const media_object = {
             originalname: req.file.originalname,
             buffer: req.file.buffer,
@@ -47,5 +45,4 @@ const uploadImagemCosmic = async (req: any, mediaType?: string) => {
     }
 }
 
-
-export { upload, uploadImagemCosmic };
+export  {upload, uploadImagemCosmic};
