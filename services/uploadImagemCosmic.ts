@@ -1,7 +1,5 @@
 import multer from "multer";
 import { createBucketClient } from "@cosmicjs/sdk";
-import noticia from "../pages/api/noticia";
-import usuario from "../pages/api/usuario";
 
 
 // Obtenha as variáveis de ambiente
@@ -18,46 +16,36 @@ const bucketDevanews = createBucketClient({
     writeKey: WRITE_KEY as string
 });
 
-// Configuração de armazenamento para o multer (manter em memória)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Função para fazer upload de arquivo para o Cosmic
-const uploadImagemCosmic = async (req: any,) => {
 
+const uploadImagemCosmic = async (req: any, mediaType?: string) => {
     if (req?.file?.originalname) {
-
-        if (
-            !req.file.originalname.includes('.png') &&
-            !req.file.originalname.includes('.jpg') &&
-            !req.file.originalname.includes('.jpeg') &&
-            !req.file.originalname.includes('.gif') &&
-            !req.file.originalname.includes('.mp4') &&
-            !req.file.originalname.includes('.mov') &&
-            !req.file.originalname.includes('.wmv') &&
-            !req.file.originalname.includes('.avi')
-        ) {
-            throw new Error('extensão de arquivo inválido');
+        if (!req.file.originalname.match(/\.(png|jpg|jpeg|mp4|mov|avi)$/i)) {
+            throw new Error('Extensão de arquivo inválida');
         }
-        const media_oject = {
-            originalName: req.file.originalname,
+        
+        const media_object = {
+            originalname: req.file.originalname,
             buffer: req.file.buffer,
         };
 
         if (req.url && req.url.includes('noticia')) {
             return await bucketDevanews.media.insertOne({
-                media: media_oject,
-                folder: "noticia"
+                media: media_object,
+                folder: "noticia" // Armazenar na pasta "noticia"
             });
-        } else { req.url && req.url.includes('usuario') } {
+        } else if (req.url && req.url.includes('cadastro')) {
             return await bucketDevanews.media.insertOne({
-                media: media_oject,
-                folder: "avatar"
+                media: media_object,
+                folder: "avatar" // Armazenar na pasta "avatar"
             });
-
-
+        } else {
+            throw new Error('Rota inválida');
         }
     }
 }
 
-export { upload, uploadImagemCosmic }
+
+export { upload, uploadImagemCosmic };

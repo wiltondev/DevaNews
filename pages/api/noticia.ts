@@ -70,8 +70,8 @@ const handler = nc()
 
       // Verificando a duração do vídeo (caso seja um vídeo)
       if (isVideo) {
-        const videoDuration = await getVideoDurationInSeconds(req.file.buffer);
-        if (videoDuration > 120) {
+        const videoDuration = await getVideoDurationInSeconds(req.file.path);
+        if (videoDuration > 1200) {
           return res.status(400).json({ erro: 'Vídeo deve ter no máximo 2 minutos de duração.' });
         }
       }
@@ -85,7 +85,7 @@ const handler = nc()
       }
 
       // Fazendo o upload da mídia para o serviço Cosmic
-      const media = await uploadImagemCosmic(mediaType);
+      const media = await uploadImagemCosmic(req, mediaType);
 
       // Criando um objeto de notícia com os dados necessários
       const noticia = {
