@@ -10,11 +10,7 @@ import { UsuarioModel } from '../../Models/UsuarioModel';
 import { politicaCORS } from '../../middlewares/politicaCORS';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { NoticiaModel } from '../../Models/NoticiaModel';
-import categoria from './categoria';
-
-
-
-
+import usuario from './usuario';
 
 
 
@@ -23,8 +19,6 @@ const handler = nc()
 
   // Configurando o middleware para fazer upload de arquivos (imagem ou vídeo)
   .use(upload.single('file'))
-
-  // Lidando com uma solicitação POST para criar uma notícia
   .post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     try {
       // Obtendo o ID do usuário a partir dos parâmetros da consulta (query)
@@ -41,7 +35,7 @@ const handler = nc()
       if (!req || !req.body) {
         return res.status(400).json({ erro: 'Parâmetros de entrada não informados' });
       }
-      const { titulo, materia, categoriaId } = req.body;
+      const { titulo, materia, categoriaId, nomeCategoria } = req.body;
 
       if (!titulo || titulo.length < 2 || titulo.length > 50) {
         return res.status(400).json({ erro: 'Título inválido' });
@@ -51,48 +45,50 @@ const handler = nc()
         return res.status(400).json({ erro: 'Matéria inválida' });
       }
 
-      if (!categoria) {
+      let categoria;
+      
+      if (!categoriaId) {
         return res.status(400).json({ erro: 'Categoria é obrigatória' });
       }
-  
-      // Verifique se a categoria existe no banco de dados
-      const categoriaExistente = await CategoriaModel.findById ( categoriaId )
-  
-      if (!categoriaExistente) {
-        // Se a categoria não existir, você pode optar por criar automaticamente ou retornar um erro
-        return res.status(400).json({ erro: 'Categoria inválida' });
+
+      categoria = await CategoriaModel.findById ( categoriaId  );
+
+      if (!categoria && nomeCategoria) {
+      categoria = await CategoriaModel.findOne({nome : nomeCategoria });
+      }
+
+      if(!categoria) {
+        return res.status(400).json({ erro: 'Categoria não encontrada' });
       }
        
       // Verificando se o arquivo foi enviado
 
 
-      if (!req.file || !req.file.originalname) {
+      if (!req.file) {
         return res.status(400).json({ erro: 'Imagem ou vídeo é obrigatório' });
 
       }
 
       // Verificando a rota para distinguir entre imagens e vídeos
-      const isVideoRoute = req.url && req.url.includes("video");
-    
+      const isVideo = req.file.mimetype.startsWith('video/');
       const isImage = req.file.mimetype.startsWith('image/');
+      
+      const isVideoRoute = req.url && req.url.includes("video");
 
+   
 
-      const formDataTipo = req.body.tipo;
-let isVideo = false;
-
-      // Se estiver na rota "reels" e for um vídeo, verificar a duração
+     
       if (isVideoRoute && isVideo) {
         const videoDuration = await getVideoDurationInSeconds(req.file.buffer);
         if (videoDuration > 120) {
           return res.status(400).json({ erro: 'Vídeo deve ter no máximo 2 minutos de duração.' });
         }
 
-        isVideo = true;
-      }
+        
+      }else if (isVideoRoute && isImage) {
+        return res.status(400).json({ erro: 'Vídeo inválido' });
+    }
 
-      if (formDataTipo === 'media') {
-        isVideo = true;
-      }
        
       // Determinando o tipo de mídia (vídeo ou imagem) com base nos formatos
       const mediaType = isVideo ? 'video' : isImage ? 'foto' : undefined;
@@ -110,7 +106,7 @@ let isVideo = false;
         idUsuario: usuario._id,
         titulo,
         materia,
-        categoria: categoriaExistente._id,
+        categoria: categoria._id,
         tipo: mediaType,   // Tipo para indicar se a mídia é um vídeo ou foto
         data: new Date(),
         arquivo: media.media.url
@@ -129,34 +125,109 @@ let isVideo = false;
       return res.status(400).json({ erro: 'Erro ao cadastrar notícia' });
     }
   })
-
-  .delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+  .put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+    try {
+      // Obtendo os IDs do usuário e da notícia dos parâmetros da consulta (query)
+      const { postId } = req.query;
+      const userId = req.user._id;
+      console.log('userId:', userId);
+      console.log('postId:', postId);
+  
+      if (!userId) {
+        return res.status(401).json({ erro: 'Usuário não autenticado' });
+      }
+  
+      // Procurando a notícia no banco de dados com base no ID
+      const noticia = await NoticiaModel.findById(postId);
+  
+      if (!noticia) {
+        return res.status(404).json({ erro: 'Notícia não encontrada' });
+      }
+  
+      // Verificando se o usuário logado é o autor da notícia
+      if (noticia.idUsuario.toString() !== userId) {
+        return res.status(403).json({ erro: 'Você não tem permissão para atualizar esta notícia' });
+      }
+  
+      // Verificando se os parâmetros de entrada estão presentes e corretos
+      if (!req || !req.body) {
+        return res.status(400).json({ erro: 'Parâmetros de entrada não informados' });
+      }
+      
+      const { titulo, materia } = req.body;
+      const isVideo = req.file && req.file.mimetype.startsWith('video/');
+      const isImage = req.file && req.file.mimetype.startsWith('image/');
+      
+      // Verificando a rota para distinguir entre atualização de vídeo ou foto
+      const isVideoRoute = req.url && req.url.includes("video");
+  
+      // Se estiver na rota de vídeo e for uma atualização de vídeo
+      if (isVideoRoute && isVideo) {
+        const videoDuration = await getVideoDurationInSeconds(req.file.buffer);
+        if (videoDuration > 120) {
+          return res.status(400).json({ erro: 'Vídeo deve ter no máximo 2 minutos de duração.' });
+        }
+        
+        // Fazendo o upload do novo vídeo
+        const media = await uploadImagemCosmic(req, 'video');
+        noticia.arquivo = media.media.url;
+        noticia.tipo = 'video';
+      }
+      
+      // Se estiver na rota de imagem e for uma atualização de imagem
+      if (!isVideoRoute && isImage) {
+        // Fazendo o upload da nova imagem
+        const media = await uploadImagemCosmic(req, 'foto');
+        noticia.arquivo = media.media.url;
+        noticia.tipo = 'foto';
+      }
+  
+      // Atualizando os campos título e matéria se estiverem presentes no corpo da requisição
+      if (titulo) {
+        noticia.titulo = titulo;
+      }
+  
+      if (materia) {
+        noticia.materia = materia;
+      }
+  
+      // Salvando a notícia atualizada
+      await noticia.save();
+  
+      return res.status(200).json({ msg: 'Notícia atualizada com sucesso' });
+    } catch (e) {
+      console.error(e);
+      return res.status(400).json({ erro: 'Erro ao atualizar notícia' });
+    }
+  })
+  
+ .delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     try {
       // Obtendo os IDs do usuário e da publicação dos parâmetros da consulta (query)
-      const { postId, userId } = req.query;
+      const { postId} = req.query;
+      const userId = req.user._id;
       console.log('userId:', userId);
       console.log('postId:', postId);
 
-      // Procurando o usuário no banco de dados com base no ID
-      const usuario = await UsuarioModel.findById(userId);
-      console.log('usuario:', usuario.nome);
+    
       if (!usuario) {
         return res.status(400).json({ erro: 'Usuário não encontrado' });
       }
+      
+      const noticia = await NoticiaModel.findById(postId);
 
-      // Verificando se existe pelo menos uma publicação com o ID especificado pelo usuário
-      const noticiasMinhas = await NoticiaModel.find({ _id: postId, idUsuario: userId });
-      if (noticiasMinhas && noticiasMinhas.length > 0) {
-        // Deletando a publicação
-        await NoticiaModel.deleteOne({ _id: postId });
-        // Respondendo com uma mensagem de sucesso
-        return res.status(200).json({ msg: 'Publicação deletada com sucesso' });
+      if (!noticia) {
+        return res.status(400).json({ erro: 'Publicação não encontrada' });
       }
 
-      // Respondendo com uma mensagem de erro se a publicação não for encontrada
-      return res.status(400).json({ erro: 'Publicação não encontrada' });
+      if(noticia.idUsuario.toString() !== userId){
+        return res.status(400).json({ erro: 'Usuário não autorizado' });
+      }
+
+      await NoticiaModel.deleteOne({ _id: postId });
+
+         return res.status(200).json({ msg: 'Publicação deletada com sucesso' });
     } catch (e) {
-      // Lidando com erros e respondendo com uma mensagem de erro
       console.error(e);
       return res.status(400).json({ erro: 'Erro ao deletar publicação' });
     }
