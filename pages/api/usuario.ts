@@ -11,7 +11,7 @@ const handler = nc()
     .use(upload.single('file'))
     .put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>)=>{
         try{
-            const {userId} = req?.query;
+            const {userId} = req.query;
             const usuario = await UsuarioModel.findById(userId);
 
             if(!usuario){
