@@ -11,7 +11,7 @@ import { RespostaPadraoMsg } from '../../types/RespostaPadraoMsg';
 
 const handler = nc()
 
-.post(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any >) => {
+  .post(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
     try {
       let { nomeCategoria } = req.body;
       nomeCategoria = nomeCategoria.toLowerCase();
@@ -34,30 +34,66 @@ const handler = nc()
 
     };
   });
+handler.put(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
+  try {
+    let { nomeCategoria, id } = req.body;
+    nomeCategoria = nomeCategoria.toLowerCase();
 
-  handler.get(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
-    try {
-      if (req.method !== 'GET') {
-        return res.status(405).json({ erro: 'Método não permitido' });
+    // Encontre a categoria pelo ID e atualize o nome
+    const categoriaAtualizada = await CategoriaModel.findByIdAndUpdate(id, { nomeCategoria }, { new: true });
+
+    if (!categoriaAtualizada) {
+      return res.status(400).json({ erro: 'Categoria não encontrada' });
+    }
+
+    return res.status(200).json(categoriaAtualizada);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: 'Erro ao atualizar categoria' });
+  }
+});
+
+handler.delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
+  try {
+    const { id } = req.body;
+
+    // Encontre a categoria pelo ID e delete
+    const categoriaDeletada = await CategoriaModel.findByIdAndDelete(id);
+
+    if (!categoriaDeletada) {
+      return res.status(400).json({ erro: 'Categoria não encontrada' });
+    }
+
+    return res.status(200).json({ mensagem: 'Categoria deletada com sucesso' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: 'Erro ao deletar categoria' });
+  }
+});
+
+
+handler.get(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
+  try {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ erro: 'Método não permitido' });
 
     }
-    
-      const categorias = await CategoriaModel.find();
 
-      const categoriasFormatadas = categorias.map((categoria) => ({
-          nomeCategoria: categoria.nomeCategoria,
-          _id: categoria._id.toString(),
-      }));
+    const categorias = await CategoriaModel.find();
 
-      
+    const categoriasFormatadas = categorias.map((categoria) => ({
+      nomeCategoria: categoria.nomeCategoria,
+      _id: categoria._id.toString(),
+    }));
 
-     return res.status(200).json({ categorias: categoriasFormatadas });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ erro: 'Erro ao listar categorias' });
-    }
-  });
-  
 
-export default politicaCORS(validarTokenJwt(conectarMongoDB(handler))); 
-  
+
+    return res.status(200).json({ categorias: categoriasFormatadas });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ erro: 'Erro ao listar categorias' });
+  }
+});
+
+
+export default politicaCORS(validarTokenJwt(conectarMongoDB(handler)));
