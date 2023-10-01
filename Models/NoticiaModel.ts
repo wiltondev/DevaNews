@@ -10,6 +10,7 @@ const NoticiaSchema = new Schema({
     required: true,
   },
   foto: { type: String, required: false },
+  video: { type: String, required: false },
   data: { type: Date, required: true },
 });
 

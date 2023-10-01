@@ -94,6 +94,62 @@ const handler = nc()
       return res.status(400).json({ erro: 'Erro ao cadastrar notícia' });
     }
   })
+
+  handler.put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+    try {
+        const { noticiaId } = req.query;
+        const noticia = await NoticiaModel.findById(noticiaId);
+        if (!noticia) {
+            return res.status(400).json({ erro: 'Notícia não encontrada' });
+        }
+
+        // Atualize os campos da notícia com os dados da solicitação
+        const { titulo, materia, categoriaId } = req?.body;
+        if (titulo) noticia.titulo = titulo;
+        if (materia) noticia.materia = materia;
+        if (categoriaId) noticia.categoria = categoriaId;
+
+
+        if (req.file && req.file.originalname) {
+          const buffer = req.file.buffer;
+          const type = await imageType(buffer);
+
+          if (!type || !['image/jpeg', 'image/png', 'image/jpg', 'image/bmp'].includes(type.mime)) {
+              return res.status(400).json({ erro: 'Tipo de arquivo não suportado. Apenas imagens são permitidas.' });
+          }
+
+          const image = await uploadImagemCosmic(req);
+          noticia.foto = image.media.url; // Atualize a foto da notícia
+      }
+
+        // Salve a notícia atualizada no banco de dados
+        await NoticiaModel.findByIdAndUpdate(noticiaId, noticia);
+
+        return res.status(200).json({ msg: 'Notícia atualizada com sucesso' });
+    } catch (e) {
+        console.error(e);
+        return res.status(400).json({ erro: 'Erro ao atualizar notícia' });
+    }
+})
+
+// Lidando com uma solicitação DELETE para excluir uma notícia
+handler.delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+    try {
+        const { noticiaId } = req.query;
+        const noticia = await NoticiaModel.findById(noticiaId);
+        if (!noticia) {
+            return res.status(400).json({ erro: 'Notícia não encontrada' });
+        }
+
+        // Exclua a notícia do banco de dados
+        await NoticiaModel.findByIdAndDelete(noticiaId);
+
+        return res.status(200).json({ msg: 'Notícia excluída com sucesso' });
+    } catch (e) {
+        console.error(e);
+        return res.status(400).json({ erro: 'Erro ao excluir notícia' });
+    }
+})
  
 export const config = {
   api: {
