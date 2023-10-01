@@ -11,7 +11,7 @@ import { politicaCORS } from '../../middlewares/politicaCORS';
 
 
 const handler = nc ()
-    .use(upload.single('file'))
+    .use(upload.single('file'))//garante que multer seja processado primeiro (upload) e depois o endpoint
     .post(async (req: NextApiRequest, res:NextApiResponse<RespostaPadraoMsg>) => {
 
 
@@ -36,9 +36,9 @@ const handler = nc ()
             return res.status(400).json({ erro: 'já existe usuario com esse email' })
         };
 
-        //enviar imagem do multer para o cosmic 
+       
 
-        const image = await uploadImagemCosmic(req);
+        const image = await uploadImagemCosmic(req); //enviar imagem do multer apos ser processada para o cosmic 
 
         //salvar no banco de dados
         const usuarioASerSalvo = {
@@ -51,8 +51,8 @@ const handler = nc ()
         return res.status(200).json({ msg: 'Usuario criado com sucesso!' });
 
     });
-        
-export const config ={
+    //garante nunca o bodyParser transforme os dados em json manda com formDada, key/value
+export const config ={   //
     api:{
         bodyParser : false
     }

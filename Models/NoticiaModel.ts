@@ -9,8 +9,7 @@ const NoticiaSchema = new Schema({
     ref: 'Categoria', // Nome da categoria
     required: true,
   },
-  tipo: { type: String, enum: ["imagem", "video"], required: true },
-  arquivo: { type: Buffer, required: true },
+  foto: { type: String, required: false },
   data: { type: Date, required: true },
 });
 

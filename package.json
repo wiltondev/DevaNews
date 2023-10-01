@@ -16,7 +16,9 @@
     "cosmicjs": "^4.3.7",
     "eslint": "8.49.0",
     "eslint-config-next": "13.4.19",
+    "file-type": "^18.5.0",
     "get-video-duration": "^4.1.0",
+    "image-type": "^5.2.0",
     "jsonwebtoken": "^9.0.2",
     "md5": "^2.3.0",
     "moment": "^2.29.4",
@@ -30,6 +32,9 @@
     "typescript": "5.2.2"
   },
   "devDependencies": {
+    "@babel/cli": "^7.23.0",
+    "@babel/core": "^7.23.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.23.0",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/md5": "^2.3.2",
     "@types/multer": "^1.4.7"

@@ -18,13 +18,9 @@ const bucketDevanews = createBucketClient({
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-const uploadImagemCosmic = async (req: any, mediaType?: string) => {
+const uploadImagemCosmic = async (req: any) => {
     if (req?.file?.originalname) {
-        if (!req.file.originalname.match(/\.(png|jpg|jpeg|mp4|mov|avi)$/i)) {
-            throw new Error('Extensão de arquivo inválida');
-        }
-
-        const media_object = {
+            const media_object = {
             originalname: req.file.originalname,
             buffer: req.file.buffer,
         };
