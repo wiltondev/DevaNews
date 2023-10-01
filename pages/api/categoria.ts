@@ -13,7 +13,9 @@ const handler = nc()
 
 .post(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any >) => {
     try {
-      const { nomeCategoria } = req.body;
+      let { nomeCategoria } = req.body;
+      nomeCategoria = nomeCategoria.toLowerCase();
+
 
       // Verifique se o nome da categoria já existe
       const categoriaExistente = await CategoriaModel.findOne({ nomeCategoria });
@@ -55,6 +57,7 @@ const handler = nc()
       return res.status(500).json({ erro: 'Erro ao listar categorias' });
     }
   });
+  
 
 export default politicaCORS(validarTokenJwt(conectarMongoDB(handler))); 
   

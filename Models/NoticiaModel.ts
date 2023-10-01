@@ -1,4 +1,15 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
+
+// Defina a interface para Notícia
+export interface Noticia extends Document {
+  idUsuario: string;
+  titulo: string;
+  materia: string;
+  categoria: Schema.Types.ObjectId; // ID da categoria à qual a notícia pertence
+  foto: string;
+  video: string;
+  data: Date;
+}
 
 const NoticiaSchema = new Schema({
   idUsuario: { type: String, required: true },
