@@ -1,4 +1,3 @@
-// Importando as bibliotecas e módulos necessários
 import type { NextApiResponse } from 'next';
 import type { RespostaPadraoMsg } from '../../types/RespostaPadraoMsg';
 import nc from 'next-connect';
@@ -9,33 +8,31 @@ import { CategoriaModel } from '../../Models/CategoriaModel';
 import { UsuarioModel } from '../../Models/UsuarioModel';
 import { politicaCORS } from '../../middlewares/politicaCORS';
 import { NoticiaModel } from '../../Models/NoticiaModel';
-import categoria from './categoria';
-import imageType from 'image-type';
+import { Readable } from 'stream';
+import { getVideoDurationInSeconds } from 'get-video-duration'; // Importar get-video-duration
 
 const handler = nc()
 
-  // Configurando o middleware para fazer upload de arquivos (imagem ou vídeo)
   .use(upload.single('file'))
 
-  // Lidando com uma solicitação POST para criar uma notícia
   .post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     try {
-      // Obtendo o ID do usuário a partir dos parâmetros da consulta (query)
       const { userId } = req.query;
       console.log('userId:', userId);
 
-      // Procurando o usuário no banco de dados com base no ID
+      // Encontre o usuário pelo ID
       const usuario = await UsuarioModel.findById(userId);
       if (!usuario) {
         return res.status(400).json({ erro: 'Usuário não encontrado' });
       }
 
-      // Verificando se os parâmetros de entrada estão presentes e corretos
+      // Verifique se os parâmetros de entrada estão presentes e corretos
       if (!req || !req.body) {
         return res.status(400).json({ erro: 'Parâmetros de entrada não informados' });
       }
       const { titulo, materia, categoriaId } = req?.body;
 
+      // Valide os campos do formulário
       if (!titulo || titulo.length < 2 || titulo.length > 50) {
         return res.status(400).json({ erro: 'Título inválido' });
       }
@@ -44,58 +41,73 @@ const handler = nc()
         return res.status(400).json({ erro: 'Matéria inválida' });
       }
 
-      if (!categoria) {
+      if (!categoriaId) {
         return res.status(400).json({ erro: 'Categoria é obrigatória' });
       }
-  
+
       // Verifique se a categoria existe no banco de dados
-      const categoriaExistente = await CategoriaModel.findById ( categoriaId )
+      const categoriaExistente = await CategoriaModel.findById(categoriaId)
       console.log("categoriaExistente:", categoriaExistente);
-  
+
       if (!categoriaExistente) {
-        // Se a categoria não existir, você pode optar por criar automaticamente ou retornar um erro
         return res.status(400).json({ erro: 'Categoria inválida' });
       }
-       
-         
+
+      // Verifique se um arquivo foi enviado e obtenha a extensão do arquivo
       if (!req.file || !req.file.originalname) {
-        return res.status(400).json({ erro: 'file é obrigatório' });
-
+        return res.status(400).json({ erro: 'Arquivo é obrigatório' });
       }
-      const buffer = req.file.buffer;
-      const type = await imageType(buffer);
+      const fileExtension = req.file.originalname.toLowerCase().slice(-4);
+      const allowedImageExtensions = ['.jpeg', '.png', '.jpg', '.bmp'];
+      const allowedVideoExtensions = ['.mp4', '.webm', '.mov', '.avi'];
 
-      if (!type || !['image/jpeg', 'image/png', 'image/jpg', 'image/bmp'].includes(type.mime)) {
-  return res.status(400).json({ erro: 'Tipo de arquivo não suportado. Apenas imagens são permitidas.' });
+      // Verifique se o formato do arquivo é suportado (imagem ou vídeo)
+      if (!allowedImageExtensions.includes(fileExtension) && !allowedVideoExtensions.includes(fileExtension)) {
+        return res.status(400).json({ erro: 'Formato de arquivo não suportado. Apenas imagens ou vídeos são permitidos.' });
       }
 
+      if (allowedVideoExtensions.includes(fileExtension)) {
+        // Crie um fluxo legível (Readable Stream) a partir do buffer do arquivo
+        const videoStream = Readable.from(req.file.buffer);
+        
+        // Use a biblioteca get-video-duration para obter a duração do vídeo
+        const durationInSeconds = await getVideoDurationInSeconds(videoStream);
+        
+        if (durationInSeconds > 120) {
+          return res.status(400).json({ erro: 'Vídeo deve ter no máximo 2 minutos de duração.' });
+        }
+      }
 
-      const image = await uploadImagemCosmic(req);
+      // Faça upload da imagem ou vídeo para o serviço (uploadImagemCosmic)
+      const media = await uploadImagemCosmic(req);
+
+      // Crie um objeto de notícia com os dados
       const noticia = {
         idUsuario: usuario._id,
         titulo,
         materia,
         categoria: categoriaExistente._id,
-        foto : image.media.url,
+        foto: media.url, // Use a URL do arquivo enviado
         data: new Date()
       }
 
+      // Atualize o contador de notícias do usuário
+      usuario.noticias++;
+      await UsuarioModel.findByIdAndUpdate({ _id: usuario._id }, usuario);
 
-    usuario.noticias++;
-    await UsuarioModel.findByIdAndUpdate({_id : usuario._id}, usuario);
-    await NoticiaModel.create(noticia);
-
+      // Crie a notícia no banco de dados
+      await NoticiaModel.create(noticia);
 
       return res.status(200).json({ msg: 'Notícia criada com sucesso' });
-
     } catch (e) {
-      // Lidando com erros e respondendo com uma mensagem de erro
       console.error(e);
-      return res.status(400).json({ erro: 'Erro ao cadastrar notícia' });
+      return res.status(400).json({ erro: 'Erro ao criar notícia' });
     }
   })
 
-  handler.put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+
+
+ /* handler.put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     try {
         const { noticiaId } = req.query;
         const noticia = await NoticiaModel.findById(noticiaId);
@@ -112,9 +124,9 @@ const handler = nc()
 
         if (req.file && req.file.originalname) {
           const buffer = req.file.buffer;
-          const type = await imageType(buffer);
+        
 
-          if (!type || !['image/jpeg', 'image/png', 'image/jpg', 'image/bmp'].includes(type.mime)) {
+        if (!type || !['image/jpeg', 'image/png', 'image/jpg', 'image/bmp'].includes(any) {
               return res.status(400).json({ erro: 'Tipo de arquivo não suportado. Apenas imagens são permitidas.' });
           }
 
@@ -149,7 +161,7 @@ handler.delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
         console.error(e);
         return res.status(400).json({ erro: 'Erro ao excluir notícia' });
     }
-})
+})*/
  
 export const config = {
   api: {
