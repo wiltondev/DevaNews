@@ -173,6 +173,9 @@ const handler = nc()
           return res.status(400).json({ erro: 'Vídeo deve ter no máximo 2 minutos de duração.' });
         }
       }
+       const novaMedia = await uploadImagemCosmic(req);
+       noticia.media = novaMedia.media.url;
+
       }
 
        
