@@ -82,14 +82,14 @@ const handler = nc()
       const media = await uploadImagemCosmic(req);
 
       // Crie um objeto de notícia com os dados
-      const noticia = {
+      const noticia = new NoticiaModel( {
         idUsuario: usuario._id,
         titulo,
         materia,
         categoria: categoriaExistente._id,
-        foto: media.url, // Use a URL do arquivo enviado
+        url: media?.media?.url, // Use a URL do arquivo enviado
         data: new Date()
-      }
+      })
 
       // Atualize o contador de notícias do usuário
       usuario.noticias++;
@@ -97,6 +97,8 @@ const handler = nc()
 
       // Crie a notícia no banco de dados
       await NoticiaModel.create(noticia);
+      
+
 
       return res.status(200).json({ msg: 'Notícia criada com sucesso' });
     } catch (e) {
