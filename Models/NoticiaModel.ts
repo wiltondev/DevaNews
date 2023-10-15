@@ -13,7 +13,7 @@ export interface Noticia extends Document {
 const NoticiaSchema = new Schema({
   idUsuario: { type: String, required: true },
   titulo: { type: String, required: true, maxlength: 200 },
-  materia: { type: String, required: true, minlength: 2, maxlength: 3000 },
+  materia: { type: String, required: true, minlength: 2, maxlength: 10000 },
   categoria: {
     type: mongoose.Schema.Types.ObjectId, //  ID da categoria
     ref: "Categoria", // Nome da categoria

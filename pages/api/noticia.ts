@@ -105,6 +105,7 @@ const handler = nc()
 
       // Crie um objeto de notícia com os dados
       const noticia = new NoticiaModel({
+      const noticia = new NoticiaModel( {
         idUsuario: usuario._id,
         titulo,
         materia,
@@ -112,6 +113,9 @@ const handler = nc()
         url: media?.media?.url, // Use a URL do arquivo enviado
         data: new Date(),
       });
+        url: media?.media?.url, // Use a URL do arquivo enviado
+        data: new Date()
+      })
 
       // Atualize o contador de notícias do usuário
       usuario.noticias++;
@@ -119,6 +123,8 @@ const handler = nc()
 
       // Crie a notícia no banco de dados
       await NoticiaModel.create(noticia);
+      
+
 
       return res.status(200).json({ msg: "Notícia criada com sucesso" });
     } catch (e) {
