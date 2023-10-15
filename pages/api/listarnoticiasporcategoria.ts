@@ -1,18 +1,23 @@
-// routes/noticias.js
-import { NextApiResponse } from "next";
-import { NoticiaModel } from "../../Models/NoticiaModel";
-import { CategoriaModel } from "../../Models/CategoriaModel";
-import nc from "next-connect";
+import type { NextApiRequest, NextApiResponse } from "next";
 import { conectarMongoDB } from "../../middlewares/conectarMongoDB";
 import { politicaCORS } from "../../middlewares/politicaCORS";
-import { RespostaPadraoMsg } from "../../types/RespostaPadraoMsg";
+import { NoticiaModel } from "../../Models/NoticiaModel";
+import { CategoriaModel } from "../../Models/CategoriaModel";
+import type { RespostaPadraoMsg } from "../../types/RespostaPadraoMsg";
 
-const handler = nc().get(
-  async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
-    try {
+const listarNoticiasPorCategoriaEndpoint = async (
+  req: NextApiRequest,
+  res: NextApiResponse<RespostaPadraoMsg | any[]>
+) => {
+  try {
+    if (req.method === "GET") {
       if (req?.query?.id) {
+        const categoria = await CategoriaModel.findById(req?.query?.id);
+        if (!categoria) {
+          return res.status(400).json({ erro: "Categoria não encontrada" });
+        }
         // Recupere todas as notícias dessa categoria
-        const noticias = await NoticiaModel.find({ _id: req?.query?.id });
+        const noticias = await NoticiaModel.find({ categoria: categoria._id });
 
         // Formate as notícias para a resposta
         const noticiasFormatadas = await Promise.all(
@@ -36,8 +41,15 @@ const handler = nc().get(
 
         return res.status(200).json(noticiasFormatadas);
       } else {
+        const { nomeCategoria } = req.query;
+        const categoria = await CategoriaModel.findOne({
+          nomeCategoria: nomeCategoria,
+        });
+        if (!categoria) {
+          return res.status(400).json({ erro: "Categoria não encontrada" });
+        }
         // Recupere todas as notícias dessa categoria
-        const noticias = await NoticiaModel.find();
+        const noticias = await NoticiaModel.find({ categoria: categoria._id });
 
         // Formate as notícias para a resposta
         const noticiasFormatadas = await Promise.all(
@@ -48,7 +60,7 @@ const handler = nc().get(
             const noticiaFormatada = {
               titulo: noticia.titulo,
               materia: noticia.materia,
-              url: noticia.url,
+              foto: noticia.foto,
               video: noticia.video,
               data: noticia.data,
               categoria: categoria ? categoria.nomeCategoria : null,
@@ -61,11 +73,16 @@ const handler = nc().get(
 
         return res.status(200).json(noticiasFormatadas);
       }
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ erro: "Erro ao listar notícias" });
     }
+    return res.status(405).json({ erro: "Metodo informado nao e valido" });
+  } catch (e) {
+    console.log(e);
+    return res
+      .status(500)
+      .json({ erro: "Nao foi possivel buscar as notícias:" + e });
   }
-);
+};
 
-export default politicaCORS(conectarMongoDB(handler));
+export default politicaCORS(
+  conectarMongoDB(listarNoticiasPorCategoriaEndpoint)
+);
