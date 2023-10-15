@@ -34,7 +34,8 @@ const handler = nc().post(
 );
 handler.put(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
   try {
-    let { nomeCategoria, id } = req.body;
+    let { id } = req.query;
+    let { nomeCategoria } = req.body;
 
     // Encontre a categoria pelo ID e atualize o nome
     const categoria = await CategoriaModel.findById(id);
@@ -43,12 +44,9 @@ handler.put(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
       return res.status(400).json({ erro: "Categoria não encontrada" });
     }
 
-    // Encontre a categoria pelo ID e atualize o nome
-    const categoriaAtualizada = [id, nomeCategoria];
+    await CategoriaModel.findByIdAndUpdate(id, nomeCategoria);
 
-    await CategoriaModel.findByIdAndUpdate(id, categoriaAtualizada);
-
-    return res.status(200).json(categoriaAtualizada);
+    return res.status(200).json({ msg: "Categoria atualizada com sucesso" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ erro: "Erro ao atualizar categoria" });
