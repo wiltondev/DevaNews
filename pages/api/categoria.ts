@@ -44,7 +44,10 @@ handler.put(async (req: any, res: NextApiResponse<RespostaPadraoMsg | any>) => {
       return res.status(400).json({ erro: "Categoria não encontrada" });
     }
 
-    await CategoriaModel.findByIdAndUpdate(id, nomeCategoria);
+    await CategoriaModel.findByIdAndUpdate(
+      { _id: id },
+      { nomeCategoria: nomeCategoria }
+    );
 
     return res.status(200).json({ msg: "Categoria atualizada com sucesso" });
   } catch (error) {
