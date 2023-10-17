@@ -1,166 +1,250 @@
-// Importações de módulos e middlewares necessários
-import type { NextApiResponse } from 'next';
-import type { RespostaPadraoMsg } from '../../types/RespostaPadraoMsg';
-import nc from 'next-connect';
-import { conectarMongoDB } from '../../middlewares/conectarMongoDB';
-import { validarTokenJwt } from '../../middlewares/validarTokenJWT';
-import { NoticiaModel } from '../../Models/NoticiaModel';
-import { UsuarioModel } from '../../Models/UsuarioModel';
-import { politicaCORS } from '../../middlewares/politicaCORS';
+import sharp from "sharp";
+import type { NextApiResponse } from "next";
+import type { RespostaPadraoMsg } from "../../types/RespostaPadraoMsg";
+import nc from "next-connect";
+import { upload, uploadImagemCosmic } from "../../services/uploadImagemCosmic";
+import { conectarMongoDB } from "../../middlewares/conectarMongoDB";
+import { validarTokenJwt } from "../../middlewares/validarTokenJWT";
+import { CategoriaModel } from "../../Models/CategoriaModel";
+import { UsuarioModel } from "../../Models/UsuarioModel";
+import { politicaCORS } from "../../middlewares/politicaCORS";
+import { NoticiaModel } from "../../Models/NoticiaModel";
+import { Readable } from "stream";
+import { getVideoDurationInSeconds } from "get-video-duration"; // Importar get-video-duration
 
-// Crie um manipulador usando next-connect
-const handler = nc();
+const handler = nc()
+  .use(upload.single("file"))
 
-// Manipulador para criar uma nova notícia (POST)
-handler.post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
-  try {
-    // Obtenha o ID do usuário a partir dos parâmetros da consulta
-    const { userId } = req.query;
-    const data = req.body
-    if(req.method !== 'POST'){
-      return res.status(400).json({ erro: 'Metodo não permitido' });
+  .post(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+    try {
+      const { userId } = req.query;
+      console.log("userId:", userId);
+
+      // Encontre o usuário pelo ID
+      const usuario = await UsuarioModel.findById(userId);
+      if (!usuario) {
+        return res.status(400).json({ erro: "Usuário não encontrado" });
+      }
+
+      // Verifique se os parâmetros de entrada estão presentes e corretos
+      if (!req || !req.body) {
+        return res
+          .status(400)
+          .json({ erro: "Parâmetros de entrada não informados" });
+      }
+      const { titulo, materia, categoriaId } = req?.body;
+
+      // Valide os campos do formulário
+      if (!titulo || titulo.length < 2 || titulo.length > 50) {
+        return res.status(400).json({ erro: "Título inválido" });
+      }
+
+      if (!materia || materia.length < 2 || materia.length > 5000) {
+        return res.status(400).json({ erro: "Matéria inválida" });
+      }
+
+      if (!categoriaId) {
+        return res.status(400).json({ erro: "Categoria é obrigatória" });
+      }
+
+      // Verifique se a categoria existe no banco de dados
+      const categoriaExistente = await CategoriaModel.findById(categoriaId);
+      console.log("categoriaExistente:", categoriaExistente);
+
+      if (!categoriaExistente) {
+        return res.status(400).json({ erro: "Categoria inválida" });
+      }
+
+      // Verifique se um arquivo foi enviado e obtenha a extensão do arquivo
+      if (!req.file || !req.file.originalname) {
+        return res.status(400).json({ erro: "Arquivo é obrigatório" });
+      }
+      const fileExtension = req.file.originalname.toLowerCase().slice(-4);
+      const allowedImageExtensions = [".jpeg", ".png", ".jpg", ".bmp"];
+      const allowedVideoExtensions = [".mp4", ".webm", ".mov", ".avi"];
+
+      // Verifique se o formato do arquivo é suportado (imagem ou vídeo)
+      if (
+        !allowedImageExtensions.includes(fileExtension) &&
+        !allowedVideoExtensions.includes(fileExtension)
+      ) {
+        return res.status(400).json({
+          erro: "Formato de arquivo não suportado. Apenas imagens ou vídeos são permitidos.",
+        });
+      }
+
+      if (allowedVideoExtensions.includes(fileExtension)) {
+        // Crie um fluxo legível (Readable Stream) a partir do buffer do arquivo
+        const videoStream = Readable.from(req.file.buffer);
+
+        // Use a biblioteca get-video-duration para obter a duração do vídeo
+        const durationInSeconds = await getVideoDurationInSeconds(videoStream);
+
+        if (durationInSeconds > 120) {
+          return res
+            .status(400)
+            .json({ erro: "Vídeo deve ter no máximo 2 minutos de duração." });
+        }
+      } else if (allowedImageExtensions.includes(fileExtension)) {
+        const imageBuffer = req.file.buffer;
+
+        // Use a biblioteca sharp para obter informações sobre a imagem
+        const imageInfo = await sharp(imageBuffer).metadata();
+
+        if (!imageInfo) {
+          return res.status(400).json({
+            erro: "Não foi possível obter informações sobre a imagem.",
+          });
+        }
+
+        // Aqui você pode usar as informações da imagem, como imageInfo.width e imageInfo.height
+      }
+
+      // Faça upload da imagem ou vídeo para o serviço (uploadImagemCosmic)
+      const media = await uploadImagemCosmic(req);
+
+      // Crie um objeto de notícia com os dados
+      const noticia = new NoticiaModel({
+        idUsuario: usuario._id,
+        titulo,
+        materia,
+        categoria: categoriaExistente._id,
+        url: media?.media?.url, // Use a URL do arquivo enviado
+        data: new Date(),
+      });
+
+      // Atualize o contador de notícias do usuário
+      usuario.noticias++;
+      await UsuarioModel.findByIdAndUpdate({ _id: usuario._id }, usuario);
+
+      // Crie a notícia no banco de dados
+      await NoticiaModel.create(noticia);
+
+      return res.status(200).json({ msg: "Notícia criada com sucesso" });
+    } catch (e) {
+      console.error(e);
+      return res.status(400).json({ erro: "Erro ao criar notícia" });
     }
+  });
+handler
+  .put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+    try {
+      const { noticiaId } = req.query;
+      const { userId } = req.query;
+      console.log("userId:", userId);
+      console.log("noticiaId:", noticiaId);
 
-    
-    // Verifique se o usuário existe no banco de dados
-    const usuario = await UsuarioModel.findById(userId);
-    if (!usuario) {
-      return res.status(400).json({ erro: 'Usuário não encontrado' });
+      // Encontre o usuário pelo ID
+      const usuario = await UsuarioModel.findById(userId);
+      if (!usuario) {
+        return res.status(400).json({ erro: "Usuário não encontrado" });
+      }
+
+      // Encontre a notícia pelo ID
+      const noticia = await NoticiaModel.findById(noticiaId);
+      if (!noticia) {
+        return res.status(400).json({ erro: "Notícia não encontrada" });
+      }
+
+      // Verifique se os parâmetros de entrada estão presentes e corretos
+      if (!req || !req.body) {
+        return res
+          .status(400)
+          .json({ erro: "Parâmetros de entrada não informados" });
+      }
+      const { titulo, materia, categoria } = req?.body;
+
+      // Valide os campos do formulário
+      if (!titulo || titulo.length < 2 || titulo.length > 50) {
+        return res.status(400).json({ erro: "Título inválido" });
+      }
+
+      if (!materia || materia.length < 2 || materia.length > 5000) {
+        return res.status(400).json({ erro: "Matéria inválida" });
+      }
+
+      if (!categoria) {
+        return res.status(400).json({ erro: "Categoria é obrigatória" });
+      }
+
+      // Verifique se a categoria existe no banco de dados
+      const categoriaExistente = await CategoriaModel.findById(categoria);
+      console.log("categoriaExistente:", categoriaExistente);
+
+      if (!categoriaExistente) {
+        return res.status(400).json({ erro: "Categoria inválida" });
+      }
+
+      if (req.file && req.file.originalname) {
+        const fileExtension = req.file.originalname.toLowerCase().slice(-4);
+        const allowedImageExtensions = [".jpeg", ".png", ".jpg", ".bmp"];
+        const allowedVideoExtensions = [".mp4", ".webm", ".mov", ".avi"];
+
+        if (
+          !allowedImageExtensions.includes(fileExtension) &&
+          !allowedVideoExtensions.includes(fileExtension)
+        ) {
+          return res.status(400).json({
+            erro: "Formato de arquivo não suportado. Apenas imagens ou vídeos são permitidos.",
+          });
+        }
+
+        if (allowedVideoExtensions.includes(fileExtension)) {
+          // Crie um fluxo legível (Readable Stream) a partir do buffer do arquivo
+          const videoStream = Readable.from(req.file.buffer);
+
+          // Use a biblioteca get-video-duration para obter a duração do vídeo
+          const durationInSeconds = await getVideoDurationInSeconds(
+            videoStream
+          );
+
+          if (durationInSeconds > 120) {
+            return res
+              .status(400)
+              .json({ erro: "Vídeo deve ter no máximo 2 minutos de duração." });
+          }
+        }
+      }
+
+      // Atualize a notícia com os novos dados
+      noticia.titulo = titulo;
+      noticia.materia = materia;
+      noticia.categoria = categoriaExistente._id;
+
+      await NoticiaModel.findByIdAndUpdate(noticiaId, noticia);
+
+      return res.status(200).json({ msg: "Notícia atualizada com sucesso" });
+    } catch (e) {
+      console.error(e);
+
+      return res.status(400).json({ erro: "Erro ao atualizar notícia" });
     }
+  })
 
-    const titulo = data.titulo;
-    const materia = data.materia;
-    const categoria = data.categoria;
+  .delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+    try {
+      const { userId } = req;
+      const { noticiaId } = req.query;
 
-    // Valide os campos de entrada, como o título, matéria e categoria
-    if (!titulo || titulo.length > 200) {
-      return res.status(400).json({ erro: 'Título inválido' });
-    }
+      const noticia = await NoticiaModel.findById(noticiaId);
+      if (!noticia) {
+        return res.status(400).json({ erro: "Notícia não encontrada" });
+      }
 
-    if (!materia || materia.length < 2 || materia.length > 3000) {
-      return res.status(400).json({ erro: 'Matéria inválida' });
-    }
-
-    if (!categoria || categoria.length > 30) {
-      return res.status(400).json({ erro: 'Categoria inválida' });
-    }
-
-    // Crie um objeto de notícia com os detalhes
-    const noticia = {
-      idUsuario: usuario._id,
-      titulo,
-      materia,
-      categoria,
-      data: new Date(),
-    };
-
-    // Crie a notícia no banco de dados
-    const noticiaCriada = await NoticiaModel.create(noticia);
-
-    // Retorne a resposta com sucesso e o ID da notícia criada
-    return res.status(200).json({ msg: 'Matéria criada com sucesso', noticiaId: noticiaCriada._id });
-  } catch (e) {
-    console.error(e);
-    return res.status(400).json({ erro: 'Erro ao cadastrar notícia' });
-  }
-});
-
-// Manipulador para atualizar uma notícia (PATCH)
-handler.patch(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
-  try {
-    // Obtenha o ID do usuário autenticado a partir dos dados personalizados
-    const { userId } = req.query;
-
-    // Obtenha o ID da notícia a partir dos parâmetros da consulta
-    const noticiaId = req.query.noticiaId;
-
-    // Obtenha os dados da solicitação
-    const data = req.body;
-
-    // Valide a solicitação PATCH
-    if (req.method !== 'PATCH') {
-      return res.status(405).json({ erro: 'Método não permitido' });
-    }
-
-    // Verifique se o usuário existe no banco de dados
-    const usuario = await UsuarioModel.findById(userId);
-    if (!usuario) {
-      return res.status(401).json({ erro: 'Usuário não encontrado' });
-    }
-
-    // Verifique se a notícia pertence ao usuário autenticado
-    const noticiasMinhas = await NoticiaModel.find({ _id: noticiaId, idUsuario: userId });
-    if (!noticiasMinhas || noticiasMinhas.length === 0) {
-      return res.status(400).json({ erro: 'Notícia não encontrada' });
-    }
-
-    // Valide o corpo da solicitação
-    if (!data.titulo || data.titulo.length > 200) {
-      return res.status(400).json({ erro: 'Título inválido' });
-    }
-
-    if (!data.materia || data.materia.length < 2 || data.materia.length > 3000) {
-      return res.status(400).json({ erro: 'Matéria inválida' });
-    }
-
-    if (!data.categoria || data.categoria.length > 30) {
-      return res.status(400).json({ erro: 'Categoria inválida' });
-    }
-
-    // Atualize a notícia com os novos dados
-    const noticiaAtualizada = await NoticiaModel.findOneAndUpdate(
-      { _id: noticiaId },
-      { $set: data },
-      { new: true }
-    );
-
-    // Retorne a resposta com sucesso e o ID da notícia atualizada
-    return res.status(200).json({ msg: 'Notícia atualizada com sucesso', noticiaId: noticiaAtualizada._id });
-  } catch (e) {
-    console.error(e);
-    return res.status(400).json({ erro: 'Erro ao atualizar notícia' });
-  }
-});
-
-// Manipulador para excluir uma notícia (DELETE)
-handler.delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
-  try {
-    // Obtenha o ID da notícia a partir dos parâmetros da consulta
-    const { noticiaId } = req.query;
-
-    // Obtenha o ID do usuário autenticado a partir dos dados da solicitação
-    const userId = req.user;
-
-    // Verifique se o usuário existe no banco de dados
-    const usuario = await UsuarioModel.findById(userId);
-    if (!usuario) {
-      return res.status(400).json({ erro: 'Usuário não encontrado' });
-    }
-
-    // Verifique se a notícia pertence ao usuário autenticado
-    const noticiasMinhas = await NoticiaModel.find({ _id: noticiaId, idUsuario: usuario._id });
-    if (noticiasMinhas && noticiasMinhas.length > 0) {
       // Exclua a notícia do banco de dados
-      await NoticiaModel.deleteOne({ _id: noticiaId, idUsuario: usuario._id });
-      return res.status(200).json({ msg: 'Notícia deletada com sucesso' });
+      await NoticiaModel.findByIdAndDelete(noticiaId);
+
+      return res.status(200).json({ msg: "Notícia excluída com sucesso" });
+    } catch (e) {
+      console.error(e);
+      return res.status(400).json({ erro: "Erro ao excluir notícia" });
     }
+  });
 
-    return res.status(400).json({ erro: 'Notícia não encontrada' });
-  } catch (e) {
-    console.error(e);
-    return res.status(400).json({ erro: 'Erro ao deletar notícia' });
-  }
-});
-   
-handler.options((req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
-  // Defina os cabeçalhos CORS necessários para permitir solicitações de diferentes origens (domínios)
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST, PATCH, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
-  // Retorne a resposta com sucesso
-  return res.status(200).end();
-});
-
-
-   export default politicaCORS(validarTokenJwt(conectarMongoDB(handler)));
+export default politicaCORS(validarTokenJwt(conectarMongoDB(handler)));
