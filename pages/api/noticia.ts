@@ -129,8 +129,8 @@ const handler = nc()
 handler
   .put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     try {
-      const { noticiaId } = req.query;
-      const { userId } = req.query;
+      const { noticiaId, userId } = req.query;
+      
       console.log("userId:", userId);
       console.log("noticiaId:", noticiaId);
 
@@ -152,27 +152,32 @@ handler
           .status(400)
           .json({ erro: "Parâmetros de entrada não informados" });
       }
-      const { titulo, materia, categoria } = req?.body;
+      const { titulo, materia, categoria, file } = req?.body;
 
       // Valide os campos do formulário
+      if(titulo){
       if (!titulo || titulo.length < 2 || titulo.length > 50) {
         return res.status(400).json({ erro: "Título inválido" });
       }
+      noticia.titulo = titulo;
+      }
 
+      if(materia){
       if (!materia || materia.length < 2 || materia.length > 5000) {
         return res.status(400).json({ erro: "Matéria inválida" });
       }
-
-      if (!categoria) {
-        return res.status(400).json({ erro: "Categoria é obrigatória" });
+      noticia.materia = materia;
       }
 
-      // Verifique se a categoria existe no banco de dados
-      const categoriaExistente = await CategoriaModel.findById(categoria);
-      console.log("categoriaExistente:", categoriaExistente);
-
-      if (!categoriaExistente) {
-        return res.status(400).json({ erro: "Categoria inválida" });
+      if (categoria) {
+        // Verifique se a categoria existe no banco de dados
+        const categoriaExistente = await CategoriaModel.findById(categoria);
+        console.log("categoriaExistente:", categoriaExistente);
+  
+        if (!categoriaExistente) {
+          return res.status(400).json({ erro: "Categoria inválida" });
+        }
+        noticia.categoria = categoriaExistente._id;
       }
 
       if (req.file && req.file.originalname) {
@@ -206,12 +211,8 @@ handler
         }
       }
 
-      // Atualize a notícia com os novos dados
-      noticia.titulo = titulo;
-      noticia.materia = materia;
-      noticia.categoria = categoriaExistente._id;
-
-      await NoticiaModel.findByIdAndUpdate(noticiaId, noticia);
+  
+      await noticia.save();
 
       return res.status(200).json({ msg: "Notícia atualizada com sucesso" });
     } catch (e) {
