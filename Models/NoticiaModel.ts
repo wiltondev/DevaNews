@@ -23,5 +23,7 @@ const NoticiaSchema = new Schema({
   data: { type: Date, required: true },
 });
 
+NoticiaSchema.index({ titulo: "text", categoria: "text", materia: "text" });
+
 export const NoticiaModel =
   mongoose.models.noticias || mongoose.model("noticias", NoticiaSchema);
