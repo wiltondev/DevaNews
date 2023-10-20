@@ -8,6 +8,7 @@ export interface Noticia extends Document {
   categoria: Schema.Types.ObjectId; // ID da categoria à qual a notícia pertence
   url: string;
   data: Date;
+  dataAtualizada: Date;
 }
 
 const NoticiaSchema = new Schema({
@@ -21,6 +22,7 @@ const NoticiaSchema = new Schema({
   },
   url: { type: String, required: true },
   data: { type: Date, required: true },
+  dataAtualizada: { type: Date, required: false },
 });
 
 NoticiaSchema.index({ titulo: "text", categoria: "text", materia: "text" });

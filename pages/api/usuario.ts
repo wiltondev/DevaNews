@@ -70,25 +70,7 @@ const handler = nc()
           .json({ erro: "Não foi possível obter dados do usuário" });
       }
     }
-  )
-
-  .delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
-    try {
-      const { noticiaId: id } = req.query;
-
-      const user = await UsuarioModel.findById(id);
-      if (!user) {
-        return res.status(400).json({ erro: "Usuário não encontrado" });
-      }
-
-      await UsuarioModel.findByIdAndDelete(id);
-
-      return res.status(200).json({ msg: "Usuário excluído com sucesso" });
-    } catch (e) {
-      console.error(e);
-      return res.status(400).json({ erro: "Erro ao excluir usuário" });
-    }
-  });
+  );
 
 export const config = {
   api: {
