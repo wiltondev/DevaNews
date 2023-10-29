@@ -1,6 +1,8 @@
 import multer from "multer";
 import { createBucketClient } from "@cosmicjs/sdk";
 
+
+
 // Obtenha as variáveis de ambiente
 const { BUCKET_SLUG, READ_KEY, WRITE_KEY } = process.env;
 
@@ -16,10 +18,7 @@ const upload = multer({ storage: storage });
 
 const uploadImagemCosmic = async (req: any) => {
   if (req?.file?.originalname) {
-    const media_object = {
-      originalname: req.file.originalname,
-      buffer: req.file.buffer,
-    };
+    const media_object = req.file;
 
     if (req.url && req.url.includes("noticia")) {
       return await bucketDevanews.media.insertOne({
@@ -41,5 +40,8 @@ const uploadImagemCosmic = async (req: any) => {
     }
   }
 };
+// Função para atualizar uma mídia no serviço Cosmic
 
-export { upload, uploadImagemCosmic };
+
+// Exporte as funções necessárias
+export { upload, uploadImagemCosmic, bucketDevanews };
