@@ -129,35 +129,35 @@ const handler = nc()
     }
   })
 
-  .patch(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+  .put(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
     try {
       // Extrai os parâmetros da solicitação
       const { noticiaId, userId, mediaId } = req.query;
-  
+
       // Procura o usuário no banco de dados com base no ID do usuário
       const usuario = await UsuarioModel.findById(userId);
-  
+
       // Se o usuário não for encontrado, retorna um erro de "Usuário não encontrado"
       if (!usuario) {
         return res.status(400).json({ erro: "Usuário não encontrado" });
       }
-  
-      
+
+
       // Procura uma notícia no banco de dados com base no ID da notícia e no ID do usuário
       const noticia = await NoticiaModel.findOne({ _id: noticiaId, idUsuario: userId });
-  
+
       // Se a notícia não for encontrada, retorna um erro de "Notícia não encontrada"
       if (!noticia) {
         return res.status(400).json({ erro: "Notícia não encontrada" });
       }
-  
+
       // Verifica se a solicitação possui corpo e dados válidos
       if (!req || !req.body) {
         return res.status(400).json({ erro: "Parâmetros de entrada não informados" });
       }
-  
+
       const { titulo, materia, categoria } = req.body;
-  
+
       // Valida o campo de título se estiver presente
       if (titulo) {
         if (titulo.length < 2 || titulo.length > 50) {
@@ -165,7 +165,7 @@ const handler = nc()
         }
         noticia.titulo = titulo;
       }
-  
+
       // Valida o campo de matéria se estiver presente
       if (materia) {
         if (materia.length < 2 || materia.length > 5000) {
@@ -173,41 +173,69 @@ const handler = nc()
         }
         noticia.materia = materia;
       }
-  
+
       // Valida a categoria se estiver presente
       if (categoria) {
         // Verifica se a categoria existe no banco de dados
         const categoriaExistente = await CategoriaModel.findById(categoria);
-  
+
         // Se a categoria não existir, retorna um erro de "Categoria inválida"
         if (!categoriaExistente) {
           return res.status(400).json({ erro: "Categoria inválida" });
         }
-  
+
         noticia.categoria = categoriaExistente._id;
       }
-  
+
       // Verifica se há um arquivo anexado à solicitação e o atualiza
       const { file } = req;
 
       if (file && file.originalname) {
-        const oldMedia = noticia.mediaId;
+        const fileExtension = file.originalname.toLowerCase().slice(-4);
+        const allowedImageExtensions = [".jpeg", ".png", ".jpg", ".bmp"];
+        const allowedVideoExtensions = [".mp4", ".webm", ".mov", ".avi"];
+        if (
+          allowedImageExtensions.includes(fileExtension) ||
+          allowedVideoExtensions.includes(fileExtension)
+          ){
+
+            if (allowedVideoExtensions.includes(fileExtension)) {
+              // Crie um fluxo legível (Readable Stream) a partir do buffer do arquivo
+              const videoStream = Readable.from(req.file.buffer);
+        
+              // Use a biblioteca get-video-duration para obter a duração do vídeo
+              const durationInSeconds = await getVideoDurationInSeconds(videoStream);
+        
+              if (durationInSeconds > 120) {
+                return res
+                  .status(400)
+                  .json({ erro: "Vídeo deve ter no máximo 2 minutos de duração." });
+              }
+            }
+
+          const oldMedia = noticia.mediaId;
+
+
         const upMedia = await uploadImagemCosmic(req);
+
         if (upMedia && upMedia.media && upMedia.media.url) {
           noticia.url = upMedia.media.url;
 
-          if(oldMedia) {
+          if (oldMedia) {
             await bucketDevanews.media.deleteOne(oldMedia);
-            
+
           }
           noticia.mediaId = upMedia.media.id;
         }
+          } else {
+            return res.status(400).json({ erro: "Arquivo inválido" });
+          }
       }
-      
-  
+
+
       // Atualiza a notícia no banco de dados com as alterações feitas
       await NoticiaModel.findByIdAndUpdate(noticiaId, noticia);
-  
+
       // Retorna uma resposta de sucesso
       return res.status(200).json({ msg: "Notícia atualizada com sucesso" });
     } catch (e) {
@@ -216,28 +244,28 @@ const handler = nc()
       return res.status(400).json({ erro: "Erro ao atualizar notícia" });
     }
   })
-  
-  
 
-.delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
-      try {
-        const { userId } = req;
-        const { noticiaId } = req.query;
 
-        const noticia = await NoticiaModel.findById(noticiaId);
-        if (!noticia) {
-          return res.status(400).json({ erro: "Notícia não encontrada" });
-        }
 
-        // Exclua a notícia do banco de dados
-        await NoticiaModel.findByIdAndDelete(noticiaId);
+  .delete(async (req: any, res: NextApiResponse<RespostaPadraoMsg>) => {
+    try {
+      const { userId } = req;
+      const { noticiaId } = req.query;
 
-        return res.status(200).json({ msg: "Notícia excluída com sucesso" });
-      } catch (e) {
-        console.error(e);
-        return res.status(400).json({ erro: "Erro ao excluir notícia" });
+      const noticia = await NoticiaModel.findById(noticiaId);
+      if (!noticia) {
+        return res.status(400).json({ erro: "Notícia não encontrada" });
       }
-    });
+
+      // Exclua a notícia do banco de dados
+      await NoticiaModel.findByIdAndDelete(noticiaId);
+
+      return res.status(200).json({ msg: "Notícia excluída com sucesso" });
+    } catch (e) {
+      console.error(e);
+      return res.status(400).json({ erro: "Erro ao excluir notícia" });
+    }
+  });
 
 export const config = {
   api: {
